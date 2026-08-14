@@ -39,7 +39,7 @@ export function NightDrive() {
     if (id && /^[A-Za-z0-9_-]+$/.test(id)) void loadPlaylist(`https://www.youtube.com/playlist?list=${id}`);
   }, [playlistHydrated, loadPlaylist]);
 
-  const enterDrive = () => { drivingRef.current?.start(); setEntered(true); window.setTimeout(player.play, 450); };
+  const enterDrive = () => { drivingRef.current?.start(); setEntered(true); player.startCurrentTrack(); };
   const submitPlaylist = async (event: FormEvent) => { event.preventDefault(); const ok = await dynamic.load(playlistInput.trim()); if (ok) { setShowLoader(false); setEntered(false); } };
   const changePlaylist = () => { setPlaylistInput(dynamic.url); setShowLoader(true); player.setIsPlaylistOpen(false); };
   const progress = player.duration ? (player.currentTime / player.duration) * 100 : 0;

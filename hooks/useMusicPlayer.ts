@@ -19,7 +19,7 @@ export function useMusicPlayer(mountRef: RefObject<HTMLDivElement | null>, playl
   const [error, setError] = useState<string | null>(null);
   const [preferencesHydrated, setPreferencesHydrated] = useState(false);
   const wantsPlayback = useRef(false);
-  const youtubeActions = useRef<{ seek: (time: number) => void; play: () => void }>({ seek: () => undefined, play: () => undefined });
+  const youtubeActions = useRef<{ seek: (time: number) => void; play: () => void; loadAndPlay: (videoId: string) => void }>({ seek: () => undefined, play: () => undefined, loadAndPlay: () => undefined });
   const track = playlist[currentTrackIndex];
 
   useEffect(() => {
@@ -51,15 +51,23 @@ export function useMusicPlayer(mountRef: RefObject<HTMLDivElement | null>, playl
     return next;
   }, [currentTrackIndex, isShuffle]);
 
+  const transitionTo = useCallback((index: number) => {
+    if (!playlist.length) return;
+    const normalizedIndex = ((index % playlist.length) + playlist.length) % playlist.length;
+    const nextTrack = playlist[normalizedIndex];
+    if (!nextTrack) return;
+    wantsPlayback.current = true;
+    setError(null);
+    setCurrentTime(0);
+    setDuration(0);
+    youtubeActions.current.loadAndPlay(nextTrack.youtubeVideoId);
+    setCurrentTrackIndex(normalizedIndex);
+  }, [playlist]);
+
   const handleEnded = useCallback(() => {
-    if (isRepeat) {
-      youtubeActions.current.seek(0);
-      youtubeActions.current.play();
-    } else {
-      wantsPlayback.current = true;
-      setCurrentTrackIndex(chooseNextIndex());
-    }
-  }, [chooseNextIndex, isRepeat]);
+    if (isRepeat) transitionTo(currentTrackIndex);
+    else transitionTo(chooseNextIndex());
+  }, [chooseNextIndex, currentTrackIndex, isRepeat, transitionTo]);
 
   const youtube = useYouTubePlayer({
     mountRef,
@@ -68,17 +76,11 @@ export function useMusicPlayer(mountRef: RefObject<HTMLDivElement | null>, playl
     onEnded: handleEnded,
     onError: (message) => {
       setError(`${message}. Skipping to next track…`);
-      window.setTimeout(() => setCurrentTrackIndex((index) => (index + 1) % Math.max(playlist.length, 1)), 1800);
+      window.setTimeout(() => transitionTo(currentTrackIndex + 1), 1800);
     },
     onPlayingChange: setIsPlaying,
   });
-  youtubeActions.current = { seek: youtube.seek, play: youtube.play };
-
-  useEffect(() => {
-    if (!youtube.ready || !wantsPlayback.current) return;
-    const timer = window.setTimeout(youtube.play, 120);
-    return () => window.clearTimeout(timer);
-  }, [currentTrackIndex, youtube.ready, youtube.play]);
+  youtubeActions.current = { seek: youtube.seek, play: youtube.play, loadAndPlay: youtube.loadAndPlay };
 
   const { ready, getTime, getDuration } = youtube;
   useEffect(() => {
@@ -93,16 +95,16 @@ export function useMusicPlayer(mountRef: RefObject<HTMLDivElement | null>, playl
   const play = useCallback(() => { wantsPlayback.current = true; youtube.play(); }, [youtube]);
   const pause = useCallback(() => { wantsPlayback.current = false; youtube.pause(); }, [youtube]);
   const togglePlay = useCallback(() => isPlaying ? pause() : play(), [isPlaying, pause, play]);
-  const selectTrack = useCallback((index: number) => {
+  const startCurrentTrack = useCallback(() => {
+    if (!track) return;
     wantsPlayback.current = true;
     setCurrentTime(0);
-    setCurrentTrackIndex(index);
-  }, []);
-  const next = useCallback(() => selectTrack(chooseNextIndex()), [chooseNextIndex, selectTrack]);
-  const previous = useCallback(() => {
-    if (currentTime > 4) youtube.seek(0);
-    else selectTrack((currentTrackIndex - 1 + playlist.length) % playlist.length);
-  }, [currentTime, currentTrackIndex, selectTrack, youtube]);
+    setDuration(0);
+    youtube.loadAndPlay(track.youtubeVideoId);
+  }, [track, youtube]);
+  const selectTrack = useCallback((index: number) => transitionTo(index), [transitionTo]);
+  const next = useCallback(() => transitionTo(chooseNextIndex()), [chooseNextIndex, transitionTo]);
+  const previous = useCallback(() => transitionTo(currentTrackIndex - 1), [currentTrackIndex, transitionTo]);
   const seek = useCallback((time: number) => { youtube.seek(time); setCurrentTime(time); }, [youtube]);
   const changeVolume = useCallback((value: number) => {
     const nextVolume = Math.min(100, Math.max(0, value));
@@ -117,10 +119,10 @@ export function useMusicPlayer(mountRef: RefObject<HTMLDivElement | null>, playl
   return useMemo(() => ({
     track, playlist, currentTrackIndex, isPlaying, currentTime, duration, volume,
     isMuted: volume === 0, isShuffle, isRepeat, isPlaylistOpen, error, ready: youtube.ready,
-    play, pause, togglePlay, next, previous, seek, changeVolume, toggleMute, selectTrack,
+    play, pause, togglePlay, startCurrentTrack, next, previous, seek, changeVolume, toggleMute, selectTrack,
     setIsShuffle, setIsRepeat, setIsPlaylistOpen, clearError: () => setError(null),
   }), [track, playlist, currentTrackIndex, isPlaying, currentTime, duration, volume, isShuffle, isRepeat,
-    isPlaylistOpen, error, youtube.ready, play, pause, togglePlay, next, previous, seek,
+    isPlaylistOpen, error, youtube.ready, play, pause, togglePlay, startCurrentTrack, next, previous, seek,
     changeVolume, toggleMute, selectTrack]);
 }
 

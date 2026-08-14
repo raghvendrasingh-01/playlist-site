@@ -1,96 +1,196 @@
-# Night Drive
+# Ferrari Night Drive
 
-A cinematic personal playlist experience built with Next.js, TypeScript, custom responsive CSS, Motion, and YouTube's official IFrame Player API.
+A cinematic personal music player that combines YouTube playlists with a Ferrari night-drive experience.
 
-## Run it
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel)](https://vercel.com/)
+
+## 🚗 Live Demo
+
+[**Open Ferrari Night Drive →**](https://playlist-site-fdz9zt3et-raghvendra-singhs-projects-36b5f2fa.vercel.app/)
+
+[**GitHub Repository →**](https://github.com/raghvendrasingh-01/playlist-site)
+
+## Features
+
+- Cinematic, continuously looping Ferrari driving video with high-quality image fallbacks
+- YouTube and YouTube Music playlist URL loading through the YouTube Data API v3
+- Music playback through the official YouTube IFrame Player API
+- Real playback progress, seeking, play/pause, previous/next, shuffle, and repeat
+- Volume and mute controls
+- Scrollable playlist drawer with search
+- Favorites and Recently Played collections
+- Multiple drive scenes with clear, rain, and fog weather effects
+- Cockpit Mode, Headphone Mode, headlights, and fullscreen
+- Keyboard controls and in-app shortcut help
+- Playlist sharing through playlist IDs
+- `localStorage` persistence for playlist data, library state, and player preferences
+- Responsive glassmorphism interface for desktop and mobile
+- Installable PWA manifest
+
+## Technology Stack
+
+| Technology | Role |
+| --- | --- |
+| Next.js 16 | Application framework, routing, and server API route |
+| React 19 | Interactive player interface |
+| TypeScript 5.9 | Type-safe application code |
+| Motion | Interface animation and transitions |
+| Lucide React | Interface icons |
+| YouTube Data API v3 | Playlist metadata and track retrieval |
+| YouTube IFrame Player API | Music playback and player controls |
+| CSS | Responsive styling, glassmorphism, and visual effects |
+| Vercel | Production deployment |
+
+## How It Works
+
+```text
+User
+  ↓
+YouTube / YouTube Music playlist URL
+  ↓
+Next.js server API route
+  ↓
+YouTube Data API v3
+  ↓
+Playlist metadata + tracks
+  ↓
+Night Drive music player
+```
+
+The Ferrari video is visual-only. YouTube provides the actual music playback through its official IFrame Player API.
+
+```text
+Ferrari video
+  ↓
+Cinematic background
+  ↓
+Glassmorphism player UI
+```
+
+## YouTube API Security
+
+`YOUTUBE_API_KEY` is a server-side credential read only by the playlist API route.
+
+- Store it in `.env.local` for local development.
+- Add it as an Environment Variable in Vercel for deployment.
+- Do **not** use `NEXT_PUBLIC_YOUTUBE_API_KEY`; that prefix would expose the key to browser code.
+- Never commit the key or `.env.local` to GitHub.
+
+```env
+YOUTUBE_API_KEY=your_api_key_here
+```
+
+## Local Development
 
 ```bash
+git clone https://github.com/raghvendrasingh-01/playlist-site.git
+cd playlist-site
 npm install
+```
+
+Create `.env.local` in the project root and add:
+
+```env
+YOUTUBE_API_KEY=your_api_key_here
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Build for production with `npm run build && npm run start`.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Customize
-
-- Edit [`lib/config.ts`](lib/config.ts) for your name, title, tagline, and playlist name.
-- Edit [`data/playlist.ts`](data/playlist.ts) and replace each `youtubeVideoId` with the 11-character ID from your own public YouTube playlist. The playlist URL itself is intentionally not scraped; YouTube does not expose a reliable client-only playlist import for this use case.
-- Replace the original visual by placing your own licensed/owned image at `public/images/ferrari-cockpit.jpg`. The included SVG is an original abstract cockpit placeholder and remains as a fallback.
-
-## Import a YouTube playlist
-
-The project includes an official YouTube Data API v3 importer. It retrieves playlist metadata and video IDs only; it never downloads or hosts music.
-
-### Setup
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), create or select a project.
-2. Enable **YouTube Data API v3** under APIs & Services.
-3. Create an API key under Credentials. Restrict it to YouTube Data API usage where practical.
-4. Create `.env.local` in the project root:
-
-```text
-YOUTUBE_API_KEY=your_key_here
-```
-
-`.env.local` is ignored by Git and must never be committed to GitHub. If a key is ever exposed, revoke it and create a replacement.
-
-### Import
-
-Pass a public YouTube or YouTube Music playlist URL. The importer follows every `playlistItems` API page, preserves order, skips deleted/private items, and replaces `data/playlist.ts` only after a successful import:
+## Production Build
 
 ```bash
-npm run import-playlist -- "https://www.youtube.com/playlist?list=PLAYLIST_ID"
-npm run import-playlist -- "https://music.youtube.com/playlist?list=PLAYLIST_ID"
+npm run build
+npm run start
 ```
 
-Run the metadata-only test suite without an API key:
+## Playlist Usage
 
-```bash
-npm run test:import-playlist
-```
-
-The important structure is:
+Paste either supported public playlist URL format into the application:
 
 ```text
-app/                  Next.js shell and global cinematic styling
-components/           Scene, player, YouTube mount, and playlist drawer
-hooks/                Central player state, IFrame API, keyboard controls
-data/playlist.ts      The one playlist source of truth
-lib/config.ts         Name, title, tagline, image, playlist identity
-public/images/        Replaceable cockpit artwork
+https://www.youtube.com/playlist?list=PLAYLIST_ID
+https://music.youtube.com/playlist?list=PLAYLIST_ID
 ```
 
-## Controls
+The browser sends the URL to `POST /api/playlist`. The secure server route extracts the playlist ID and fetches its metadata and tracks through the YouTube Data API v3. The application does not scrape YouTube.
 
-Space play/pause · Left/Right seek · M mute · L playlist · H headlights · F fullscreen. State for track, volume, shuffle, and repeat is persisted in localStorage.
+## Project Structure
 
-## YouTube limitations
+```text
+app/
+└── api/playlist/route.ts       # Server-side YouTube playlist endpoint
+components/
+├── NightDrive.tsx              # Main night-drive experience
+├── DrivingBackground.tsx       # Ferrari visuals and fallback handling
+└── PlaylistDrawer.tsx          # Playlist, search, favorites, and history
+data/
+└── scenes.ts                   # Drive scenes and their visual assets
+hooks/
+├── useMusicPlayer.ts           # Playback state and controls
+├── useDynamicPlaylist.ts       # Runtime playlist loading and persistence
+└── useDriveLibrary.ts          # Favorites and Recently Played
+lib/                            # Shared configuration and YouTube utilities
+public/                         # Ferrari media and PWA assets
+scripts/                        # Playlist import tooling and tests
+types/                          # YouTube IFrame API types
+```
 
-Audio is never downloaded or hosted locally. Browser autoplay policies require the user to press **Enter the drive**. Playback depends on a video being embeddable and available; unavailable videos are reported and skipped. YouTube branding and the iframe remain subject to Google's embedding requirements.
+## Ferrari Visual Assets
 
-The importer requires a public or API-accessible playlist and consumes YouTube Data API quota. YouTube Music URLs are supported only when they contain a normal YouTube `list` playlist ID; no YouTube Music HTML or private API is used. Video playback remains in the browser through the supported YouTube IFrame Player API.
+The default Night Drive scene uses `public/videos/ferrari-night-drive.mp4`. Scene imagery is stored under `public/images/ferrari/`, with separate landscape and mobile-friendly assets where appropriate.
 
-## In-app playlist loading
+```text
+Ferrari video → scene image / video poster → original fallback artwork
+```
 
-Normal usage does not require editing `data/playlist.ts` or running the importer. On the Night Drive entry screen, paste a public YouTube or YouTube Music playlist URL and choose **Load playlist**. The browser sends only that URL to `POST /api/playlist`; the server route reads `YOUTUBE_API_KEY`, fetches playlist metadata and every paginated playlist item, and returns safe track metadata to the player. The API key is never sent to the browser.
+If the video cannot load, `DrivingBackground.tsx` reveals the configured Ferrari scene image. The entry experience also retains the original `public/images/ferrari-cockpit.svg` artwork as its fallback asset.
 
-The loaded playlist, URL, metadata, and skipped-item count are saved locally so a later visit can restore it. Use **Change playlist** from the entry screen or the drawer, and **Refresh playlist** after editing the playlist on YouTube. The static `data/playlist.ts` remains the fallback when no dynamic playlist has been loaded.
+## Keyboard Shortcuts
 
-## Deploy
+| Shortcut | Action |
+| --- | --- |
+| `Space` | Play / Pause |
+| `←` / `→` | Seek backward / forward 10 seconds |
+| `↑` / `↓` | Raise / lower volume by 5% |
+| `M` | Mute / unmute |
+| `L` | Toggle playlist drawer |
+| `S` | Toggle shuffle |
+| `R` | Toggle repeat |
+| `H` | Toggle headlights |
+| `F` | Toggle fullscreen |
+| `?` | Open shortcut help |
 
-Push the repository to GitHub, import it in Vercel, and deploy with the default Next.js settings. Add `YOUTUBE_API_KEY` in Vercel Project Settings → Environment Variables for the environments where in-app loading should work. Never add it as `NEXT_PUBLIC_YOUTUBE_API_KEY` or commit `.env.local`.
+Previous and next track controls are also available directly in the player interface.
 
-## Drive atmosphere and library
+## Design
 
-The supplied Ferrari asset folder was inspected and the useful images were copied to `public/images/ferrari/`:
+**Ferrari night drive meets cinematic music player.** The interface combines a cinematic Ferrari background, dark night palette, Ferrari-red accents, layered glassmorphism, responsive controls, and an automotive-inspired HUD.
 
-- `night-city.jpg` — nighttime Ferrari city image; poster/fallback for the driving video.
-- `road-motion.jpg` — orange Ferrari in motion; alternate open-road scene.
-- `road-mobile.jpg` — portrait Ferrari road image; mobile fallback/crop.
-- `industrial-detail.jpg` — red Ferrari against an industrial wall; after-hours/detail scene.
+## Privacy & Security
 
-Showroom and duplicate exterior images were intentionally not copied. No cockpit interior image was present, so Cockpit Mode remains a HUD presentation mode over the real driving video rather than pretending an exterior photo is an interior.
+- The YouTube API key remains server-side and is never returned to the browser.
+- No music is downloaded or hosted; playback uses the official YouTube IFrame Player API.
+- Playlist sharing places only the playlist ID in the shared URL.
+- `localStorage` contains playlist and preference data, not API credentials.
 
-The atmosphere dock supports the available scenes, Clear/Rain/Fog overlays, Cockpit Mode, Headphone Mode, keyboard help, and safe playlist sharing via a `?playlist=...` URL. The HUD pulse follows real YouTube playback state; it does not claim to analyze raw audio from the cross-origin YouTube iframe.
+## Deployment
 
-Favorites and Recently Played are stored locally (favorites by video ID, recent history capped at 30 entries). Playlist search is local and does not make additional API requests. The generated manifest makes Night Drive installable as a standalone PWA; no service worker caches third-party playback or API responses.
+Ferrari Night Drive is deployed on Vercel:
+
+**https://playlist-site-fdz9zt3et-raghvendra-singhs-projects-36b5f2fa.vercel.app/**
+
+For another Vercel deployment, import the GitHub repository and configure `YOUTUBE_API_KEY` at:
+
+```text
+Vercel → Project Settings → Environment Variables
+```
+
+Redeploy after adding the variable so the server-side playlist route can access it.

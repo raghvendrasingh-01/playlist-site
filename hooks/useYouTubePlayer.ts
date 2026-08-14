@@ -39,9 +39,14 @@ function loadApi(): Promise<void> {
 
 export function useYouTubePlayer({ mountRef, videoId, volume, onEnded, onError, onPlayingChange }: Options) {
   const playerRef = useRef<YTPlayer | null>(null);
+  const readyRef = useRef(false);
+  const latestVideoId = useRef(videoId);
+  const loadedVideoId = useRef("");
+  const pendingAutoplayVideoId = useRef<string | null>(null);
   const callbacks = useRef({ onEnded, onError, onPlayingChange });
   const [ready, setReady] = useState(false);
   callbacks.current = { onEnded, onError, onPlayingChange };
+  latestVideoId.current = videoId;
 
   useEffect(() => {
     let disposed = false;
@@ -63,7 +68,18 @@ export function useYouTubePlayer({ mountRef, videoId, volume, onEnded, onError, 
           events: {
             onReady: ({ target }) => {
               target.setVolume(volume);
+              readyRef.current = true;
               setReady(true);
+              const pendingVideoId = pendingAutoplayVideoId.current;
+              if (pendingVideoId) {
+                pendingAutoplayVideoId.current = null;
+                loadedVideoId.current = pendingVideoId;
+                target.loadVideoById(pendingVideoId);
+                target.playVideo();
+              } else if (latestVideoId.current) {
+                loadedVideoId.current = latestVideoId.current;
+                target.cueVideoById(latestVideoId.current);
+              }
             },
             onStateChange: ({ data }) => {
               if (!window.YT) return;
@@ -77,6 +93,7 @@ export function useYouTubePlayer({ mountRef, videoId, volume, onEnded, onError, 
       .catch((error: Error) => callbacks.current.onError(error.message));
     return () => {
       disposed = true;
+      readyRef.current = false;
       playerRef.current?.destroy();
       playerRef.current = null;
     };
@@ -85,9 +102,9 @@ export function useYouTubePlayer({ mountRef, videoId, volume, onEnded, onError, 
   }, []);
 
   useEffect(() => {
-    // Cueing keeps the initial experience compliant with browser autoplay rules.
-    // The parent explicitly starts playback after a user gesture.
-    if (ready) playerRef.current?.cueVideoById(videoId);
+    if (!ready || !videoId || pendingAutoplayVideoId.current || loadedVideoId.current === videoId) return;
+    loadedVideoId.current = videoId;
+    playerRef.current?.cueVideoById(videoId);
   }, [ready, videoId]);
 
   useEffect(() => {
@@ -96,6 +113,15 @@ export function useYouTubePlayer({ mountRef, videoId, volume, onEnded, onError, 
 
   return {
     ready,
+    loadAndPlay: useCallback((nextVideoId: string) => {
+      if (!nextVideoId) return;
+      pendingAutoplayVideoId.current = nextVideoId;
+      if (!readyRef.current || !playerRef.current) return;
+      pendingAutoplayVideoId.current = null;
+      loadedVideoId.current = nextVideoId;
+      playerRef.current.loadVideoById(nextVideoId);
+      playerRef.current.playVideo();
+    }, []),
     play: useCallback(() => playerRef.current?.playVideo(), []),
     pause: useCallback(() => playerRef.current?.pauseVideo(), []),
     seek: useCallback((time: number) => playerRef.current?.seekTo(time, true), []),
