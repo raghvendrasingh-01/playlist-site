@@ -1,0 +1,29 @@
+{
+  "name": "night-drive",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "import-playlist": "node --experimental-strip-types scripts/import-playlist.ts",
+    "test:import-playlist": "node --experimental-strip-types --test scripts/import-playlist.test.ts"
+  },
+  "dependencies": {
+    "motion": "12.42.2",
+    "lucide-react": "0.468.0",
+    "next": "16.2.10",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "eslint": "9.34.0",
+    "eslint-config-next": "16.2.10",
+    "typescript": "5.9.2"
+  }
+}
